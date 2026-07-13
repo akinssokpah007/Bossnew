@@ -203,11 +203,9 @@ export const newsService = {
         const dbArticles = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
         
         // Merge: Cloud overrides local on ID matches, local-only creations are preserved
-        const dbIdSet = new Set(dbArticles.map(a => a.id));
-        const localOnly = localArticles.filter(a => !dbIdSet.has(a.id) && !a.id.startsWith('art-local-'));
         const localNew = localArticles.filter(a => a.id.startsWith('art-local-'));
         
-        const merged = [...dbArticles, ...localOnly, ...localNew];
+        const merged = [...dbArticles, ...localNew];
         saveLocalArticles(merged);
         return merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
       }
@@ -383,11 +381,8 @@ export const newsService = {
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
         const dbCategories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
-        const dbIdSet = new Set(dbCategories.map(c => c.id));
-        const localOnly = localCategories.filter(c => !dbIdSet.has(c.id));
-        const merged = [...dbCategories, ...localOnly];
-        saveLocalCategories(merged);
-        return merged;
+        saveLocalCategories(dbCategories);
+        return dbCategories;
       }
     } catch (error) {
       console.warn("Firestore error or timeout getting categories. Falling back to client storage.", error);
@@ -447,11 +442,8 @@ export const newsService = {
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
         const dbTags = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tag));
-        const dbIdSet = new Set(dbTags.map(t => t.id));
-        const localOnly = localTags.filter(t => !dbIdSet.has(t.id));
-        const merged = [...dbTags, ...localOnly];
-        saveLocalTags(merged);
-        return merged;
+        saveLocalTags(dbTags);
+        return dbTags;
       }
     } catch (error) {
       console.warn("Firestore error or timeout getting tags. Falling back to client storage.", error);

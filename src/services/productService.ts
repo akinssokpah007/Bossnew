@@ -104,12 +104,10 @@ export const productService = {
       if (snap) {
         const dbProds = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
         
-        // Merge cloud products with local ones, maintaining newest items
-        const dbIdSet = new Set(dbProds.map(p => p.id));
-        const localOnly = localProds.filter(p => !dbIdSet.has(p.id) && !p.id.startsWith('prod-local-'));
+        // Merge cloud products with local ones, maintaining newest items (preserve only unsynced local creations)
         const localNew = localProds.filter(p => p.id.startsWith('prod-local-'));
         
-        const merged = [...dbProds, ...localOnly, ...localNew];
+        const merged = [...dbProds, ...localNew];
         saveLocalProducts(merged);
         return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       }

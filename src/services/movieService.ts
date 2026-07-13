@@ -104,12 +104,10 @@ export const movieService = {
       if (snap) {
         const dbMovies = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Movie));
         
-        // Merge cloud with local
-        const dbIdSet = new Set(dbMovies.map(m => m.id));
-        const localOnly = localMovies.filter(m => !dbIdSet.has(m.id) && !m.id.startsWith('movie-local-'));
+        // Merge cloud with local (preserve only unsynced local creations)
         const localNew = localMovies.filter(m => m.id.startsWith('movie-local-'));
         
-        const merged = [...dbMovies, ...localOnly, ...localNew];
+        const merged = [...dbMovies, ...localNew];
         saveLocalMovies(merged);
         return merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
       }
