@@ -16,7 +16,7 @@ import { Product } from '../types';
 
 // --- ROBUST FALLBACK SEED PRODUCTS ---
 
-const DEFAULT_PRODUCTS: Product[] = [
+export const DEFAULT_PRODUCTS: Product[] = [
   {
     id: 'prod-1',
     title: 'Nautilus Sovereign Satellite Terminal (Quantum-Encrypted)',

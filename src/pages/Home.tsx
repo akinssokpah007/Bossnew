@@ -34,11 +34,8 @@ const Home: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      let arts = await newsService.getArticles();
-      if (arts.length === 0) {
-        await seedDatabaseIfEmpty();
-        arts = await newsService.getArticles();
-      }
+      await seedDatabaseIfEmpty();
+      const arts = await newsService.getArticles();
       setArticles(arts);
 
       const cats = await newsService.getCategories();

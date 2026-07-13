@@ -17,16 +17,17 @@ const isAiStudioEnv = typeof window !== 'undefined' && (
 );
 
 // Initialize Firestore database dynamically:
-// AI Studio uses a specific named database instance, while a standard custom deployment
-// utilizes the default database instance.
-const db = isAiStudioEnv && config.firestoreDatabaseId
+// If a custom named database ID is provided in the configuration (such as in AI Studio),
+// we use it in all environments (including production deployments like Vercel)
+// to ensure perfect global consistency and avoid falling back to an empty default instance.
+const db = config.firestoreDatabaseId
   ? getFirestore(app, config.firestoreDatabaseId)
   : getFirestore(app);
 
 const storage = getStorage(app);
 
 console.log(`[Firebase] Initialized with Project ID: ${config.projectId}. Database: ${
-  isAiStudioEnv && config.firestoreDatabaseId ? config.firestoreDatabaseId : '(default)'
+  config.firestoreDatabaseId ? config.firestoreDatabaseId : '(default)'
 }`);
 
 export { app, auth, db, storage };

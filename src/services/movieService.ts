@@ -15,7 +15,7 @@ import { db } from '../lib/firebase';
 import { Movie } from '../types';
 
 // --- ROBUST FALLBACK MOVIE SEED DATA ---
-const DEFAULT_MOVIES: Movie[] = [
+export const DEFAULT_MOVIES: Movie[] = [
   {
     id: 'movie-1',
     title: 'The Sovereign Network: Inside Quantum Infrastructure',

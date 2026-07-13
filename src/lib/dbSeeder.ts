@@ -1,6 +1,8 @@
 import { collection, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { Article, Category, Tag } from '../types';
+import { DEFAULT_PRODUCTS } from '../services/productService';
+import { DEFAULT_MOVIES } from '../services/movieService';
 
 const INITIAL_CATEGORIES: Category[] = [
   { id: 'business-finance', name: 'Business & Finance', slug: 'business-finance', description: 'Global markets, macroeconomic trends, and high-stakes entrepreneurship.' },
@@ -226,7 +228,7 @@ export async function seedDatabaseIfEmpty(): Promise<boolean> {
       return false;
     }
     
-    console.log('Seeding initial categories, tags, and articles...');
+    console.log('Seeding initial categories, tags, articles, products, and movies...');
     
     // 1. Seed Categories
     for (const cat of INITIAL_CATEGORIES) {
@@ -242,8 +244,18 @@ export async function seedDatabaseIfEmpty(): Promise<boolean> {
     for (const art of INITIAL_ARTICLES) {
       await setDoc(doc(db, 'articles', art.id), art);
     }
+
+    // 4. Seed Products (Marketplace)
+    for (const prod of DEFAULT_PRODUCTS) {
+      await setDoc(doc(db, 'products', prod.id), prod);
+    }
+
+    // 5. Seed Movies (Cinema)
+    for (const movie of DEFAULT_MOVIES) {
+      await setDoc(doc(db, 'movies', movie.id), movie);
+    }
     
-    // 4. Seed metadata count
+    // 6. Seed metadata count
     await setDoc(doc(db, 'settings', 'stats'), {
       seededAt: new Date().toISOString(),
       viewsCount: 40270
