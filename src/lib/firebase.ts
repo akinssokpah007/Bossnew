@@ -4,7 +4,9 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+const config = firebaseConfig as any;
+
+const app = initializeApp(config);
 const auth = getAuth(app);
 
 // Environment detection: Check if we are running in the AI Studio container sandbox
@@ -17,14 +19,14 @@ const isAiStudioEnv = typeof window !== 'undefined' && (
 // Initialize Firestore database dynamically:
 // AI Studio uses a specific named database instance, while a standard custom deployment
 // utilizes the default database instance.
-const db = isAiStudioEnv && firebaseConfig.firestoreDatabaseId
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+const db = isAiStudioEnv && config.firestoreDatabaseId
+  ? getFirestore(app, config.firestoreDatabaseId)
   : getFirestore(app);
 
 const storage = getStorage(app);
 
-console.log(`[Firebase] Initialized with Project ID: ${firebaseConfig.projectId}. Database: ${
-  isAiStudioEnv && firebaseConfig.firestoreDatabaseId ? firebaseConfig.firestoreDatabaseId : '(default)'
+console.log(`[Firebase] Initialized with Project ID: ${config.projectId}. Database: ${
+  isAiStudioEnv && config.firestoreDatabaseId ? config.firestoreDatabaseId : '(default)'
 }`);
 
 export { app, auth, db, storage };

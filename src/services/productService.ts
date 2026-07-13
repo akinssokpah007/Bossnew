@@ -98,16 +98,20 @@ export const productService = {
     try {
       const colRef = collection(db, 'products');
       const snapPromise = getDocs(colRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
         const dbProds = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
         
-        // Merge cloud products with local ones, maintaining newest items (preserve only unsynced local creations)
-        const localNew = localProds.filter(p => p.id.startsWith('prod-local-'));
+        // Merge cloud products with local ones, maintaining newest items (preserve unsynced local creations and user-created items to avoid deletion on sync latency)
+        const dbIdSet = new Set(dbProds.map(p => p.id));
+        const localPreserved = localProds.filter(p => 
+          !dbIdSet.has(p.id) && 
+          (p.id.startsWith('prod-local-') || (!p.id.startsWith('prod-') || p.id.length > 7))
+        );
         
-        const merged = [...dbProds, ...localNew];
+        const merged = [...dbProds, ...localPreserved];
         saveLocalProducts(merged);
         return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       }
@@ -144,7 +148,7 @@ export const productService = {
       });
 
       const timeoutPromise = new Promise<string>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       return await Promise.race([writePromise, timeoutPromise]);
@@ -170,7 +174,7 @@ export const productService = {
       
       const writePromise = updateDoc(docRef, cleaned);
       const timeoutPromise = new Promise<void>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       await Promise.race([writePromise, timeoutPromise]);
@@ -188,7 +192,7 @@ export const productService = {
       const docRef = doc(db, 'products', id);
       const writePromise = deleteDoc(docRef);
       const timeoutPromise = new Promise<void>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       await Promise.race([writePromise, timeoutPromise]);

@@ -6,6 +6,8 @@ export interface UserProfile {
   displayName: string | null;
   role: UserRole;
   createdAt: string;
+  googleDriveToken?: string;
+  gmailToken?: string;
 }
 
 export interface Article {

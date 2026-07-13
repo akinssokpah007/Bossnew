@@ -52,13 +52,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 data.role = 'admin';
                 await setDoc(userRef, { role: 'admin' }, { merge: true });
               }
-            } else {
-              if (data.role !== 'viewer') {
-                data.role = 'viewer';
-                await setDoc(userRef, { role: 'viewer' }, { merge: true });
-              }
             }
             setUserProfile(data);
+            if (data.gmailToken) {
+              setGmailToken(data.gmailToken);
+            }
+            if (data.googleDriveToken) {
+              setGoogleDriveToken(data.googleDriveToken);
+            }
           } else {
             const newRole: UserRole = isMakeALuckSpam ? 'admin' : 'viewer';
             
@@ -155,6 +156,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Failed to retrieve Google Drive access token.');
       }
       setGoogleDriveToken(token);
+      if (result.user) {
+        await setDoc(doc(db, 'users', result.user.uid), { googleDriveToken: token }, { merge: true });
+      }
       return token;
     } catch (error) {
       console.error('Google Drive connection error:', error);
@@ -180,6 +184,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Failed to retrieve Gmail access token.');
       }
       setGmailToken(token);
+      if (result.user) {
+        await setDoc(doc(db, 'users', result.user.uid), { gmailToken: token }, { merge: true });
+      }
       return token;
     } catch (error) {
       console.error('Gmail connection error:', error);

@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { Article, Category, Tag } from '../types';
 
@@ -198,11 +198,31 @@ As clinical trials commence, ethicists are already raising alarms. If neural aug
 
 export async function seedDatabaseIfEmpty(): Promise<boolean> {
   try {
+    // 1. Check local storage flag first for instant client-side bypass
+    if (typeof window !== 'undefined' && localStorage.getItem('boss_news_seeded') === 'true') {
+      console.log('Local storage seeding flag found. Skipping.');
+      return false;
+    }
+
+    // 2. Check if stats metadata doc exists in Firestore (indicates DB was already initialized once)
+    const statsDocRef = doc(db, 'settings', 'stats');
+    const statsSnap = await getDoc(statsDocRef);
+    if (statsSnap.exists()) {
+      console.log('Database settings metadata exists. Skipping seeding.');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('boss_news_seeded', 'true');
+      }
+      return false;
+    }
+
+    // 3. Fallback check if articles collection is non-empty
     const articlesCol = collection(db, 'articles');
     const articlesSnap = await getDocs(articlesCol);
-    
     if (!articlesSnap.empty) {
-      console.log('Database already seeded. Skipping.');
+      console.log('Database articles collection is non-empty. Skipping seeding.');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('boss_news_seeded', 'true');
+      }
       return false;
     }
     
@@ -229,6 +249,9 @@ export async function seedDatabaseIfEmpty(): Promise<boolean> {
       viewsCount: 40270
     });
     
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('boss_news_seeded', 'true');
+    }
     console.log('Seeding completed successfully!');
     return true;
   } catch (error) {

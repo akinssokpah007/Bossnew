@@ -98,16 +98,20 @@ export const movieService = {
     try {
       const colRef = collection(db, 'movies');
       const snapPromise = getDocs(colRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
         const dbMovies = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Movie));
         
-        // Merge cloud with local (preserve only unsynced local creations)
-        const localNew = localMovies.filter(m => m.id.startsWith('movie-local-'));
+        // Merge cloud with local (preserve unsynced local creations and user-created content to avoid deletion on sync latency)
+        const dbIdSet = new Set(dbMovies.map(m => m.id));
+        const localPreserved = localMovies.filter(m => 
+          !dbIdSet.has(m.id) && 
+          (m.id.startsWith('movie-local-') || (!m.id.startsWith('movie-') || m.id.length > 8))
+        );
         
-        const merged = [...dbMovies, ...localNew];
+        const merged = [...dbMovies, ...localPreserved];
         saveLocalMovies(merged);
         return merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
       }
@@ -142,7 +146,7 @@ export const movieService = {
       });
 
       const timeoutPromise = new Promise<string>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       return await Promise.race([writePromise, timeoutPromise]);
@@ -168,7 +172,7 @@ export const movieService = {
       
       const writePromise = updateDoc(docRef, cleaned);
       const timeoutPromise = new Promise<void>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       await Promise.race([writePromise, timeoutPromise]);
@@ -186,7 +190,7 @@ export const movieService = {
       const docRef = doc(db, 'movies', id);
       const writePromise = deleteDoc(docRef);
       const timeoutPromise = new Promise<void>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       await Promise.race([writePromise, timeoutPromise]);
@@ -221,7 +225,7 @@ export const movieService = {
         likes: increment(action === 'like' ? 1 : -1),
         likedBy: action === 'like' ? arrayUnion(userId) : arrayRemove(userId)
       });
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not sync like state to cloud.", error);
@@ -254,7 +258,7 @@ export const movieService = {
         shreds: increment(action === 'shred' ? 1 : -1),
         shreddedBy: action === 'shred' ? arrayUnion(userId) : arrayRemove(userId)
       });
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not sync shred state to cloud.", error);
@@ -274,7 +278,7 @@ export const movieService = {
       const writePromise = updateDoc(docRef, {
         views: increment(1)
       });
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not increment movie views.", error);
@@ -294,7 +298,7 @@ export const movieService = {
       const writePromise = updateDoc(docRef, {
         downloads: increment(1)
       });
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not increment movie downloads.", error);

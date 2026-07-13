@@ -202,10 +202,14 @@ export const newsService = {
       if (snap) {
         const dbArticles = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
         
-        // Merge: Cloud overrides local on ID matches, local-only creations are preserved
-        const localNew = localArticles.filter(a => a.id.startsWith('art-local-'));
+        // Merge: Cloud overrides local on ID matches, local-only and user-created creations are preserved
+        const dbIdSet = new Set(dbArticles.map(a => a.id));
+        const localPreserved = localArticles.filter(a => 
+          !dbIdSet.has(a.id) && 
+          (a.id.startsWith('art-local-') || (!a.id.startsWith('art-') || a.id.length > 6))
+        );
         
-        const merged = [...dbArticles, ...localNew];
+        const merged = [...dbArticles, ...localPreserved];
         saveLocalArticles(merged);
         return merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
       }
