@@ -266,8 +266,13 @@ export async function seedDatabaseIfEmpty(): Promise<boolean> {
     }
     console.log('Seeding completed successfully!');
     return true;
-  } catch (error) {
-    console.error('Error seeding database:', error);
+  } catch (error: any) {
+    const isPermissionError = error?.message?.includes('permission') || error?.code === 'permission-denied';
+    if (isPermissionError) {
+      console.warn('Skipping database seeding: current visitor does not have permission to initialize datasets. Seeding will automatically run once an authorized administrator signs in.');
+    } else {
+      console.error('Error seeding database:', error);
+    }
     return false;
   }
 }

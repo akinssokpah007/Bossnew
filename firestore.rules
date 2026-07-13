@@ -106,5 +106,11 @@ service cloud.firestore {
       ));
       allow delete: if isAdmin();
     }
+
+    // 8. Settings / System Metadata
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isEditor();
+    }
   }
 }
