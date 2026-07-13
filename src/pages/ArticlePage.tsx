@@ -212,21 +212,34 @@ const ArticlePage: React.FC = () => {
   // Clean up any ongoing TTS on unmount
   useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
   const startNarrator = () => {
-    if (window.speechSynthesis.speaking) {
-      if (isPausedNarrator) {
-        window.speechSynthesis.resume();
-        setIsPausedNarrator(false);
-        setIsPlayingNarrator(true);
-        setNarratorStatus('Broadcasting report details...');
-        return;
-      } else {
-        window.speechSynthesis.cancel();
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      setNarratorStatus('Speech synthesis is not supported in this browser.');
+      return;
+    }
+
+    try {
+      if (window.speechSynthesis.speaking) {
+        if (isPausedNarrator) {
+          window.speechSynthesis.resume();
+          setIsPausedNarrator(false);
+          setIsPlayingNarrator(true);
+          setNarratorStatus('Broadcasting report details...');
+          return;
+        } else {
+          window.speechSynthesis.cancel();
+        }
       }
+    } catch (err) {
+      console.warn("Speech Synthesis controls failed:", err);
+      setNarratorStatus('Could not access Speech Synthesis. Try opening the app in a new tab.');
+      return;
     }
 
     // Use translated content if available, otherwise original
@@ -262,6 +275,8 @@ const ArticlePage: React.FC = () => {
     setNarratorStatus('Broadcasting introduction...');
 
     const speakNext = () => {
+      if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
       if (currentIdx >= fullScript.length) {
         setIsPlayingNarrator(false);
         setNarratorStatus('Broadcast concluded.');
@@ -283,15 +298,19 @@ const ArticlePage: React.FC = () => {
       utterance.rate = 0.92; // Deliberate, clear, authoritative pacing
       utterance.pitch = 0.95; // Slightly deeper, authoritative frequency
       
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => 
-        v.name.includes('Google US English') || 
-        v.name.includes('Natural') || 
-        v.lang.startsWith('en-US') || 
-        v.lang.startsWith('en')
-      );
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
+      try {
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => 
+          v.name.includes('Google US English') || 
+          v.name.includes('Natural') || 
+          v.lang.startsWith('en-US') || 
+          v.lang.startsWith('en')
+        );
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+      } catch (err) {
+        console.warn("Could not retrieve system voices:", err);
       }
 
       utterance.onend = () => {
@@ -301,31 +320,54 @@ const ArticlePage: React.FC = () => {
 
       utterance.onerror = (e) => {
         console.error("Speech Synthesis error:", e);
-        if (e.error !== 'interrupted') {
-          setIsPlayingNarrator(false);
-          setNarratorStatus('');
+        setIsPlayingNarrator(false);
+        setIsPausedNarrator(false);
+        
+        if (e.error === 'not-allowed') {
+          setNarratorStatus('Broadcast blocked by iframe policy. Please click "Open in New Tab" at the top-right to listen.');
+        } else {
+          setNarratorStatus(`Broadcast issue: ${e.error || 'Check browser permissions or open in a new tab'}`);
         }
       };
 
-      window.speechSynthesis.speak(utterance);
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error("Speak call failed:", err);
+        setIsPlayingNarrator(false);
+        setIsPausedNarrator(false);
+        setNarratorStatus('Narration is blocked or unsupported in this sandbox. Please open in a new tab.');
+      }
     };
 
     speakNext();
   };
 
   const pauseNarrator = () => {
-    window.speechSynthesis.pause();
-    setIsPausedNarrator(true);
-    setIsPlayingNarrator(false);
-    setNarratorStatus('Broadcast paused.');
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.pause();
+        setIsPausedNarrator(true);
+        setIsPlayingNarrator(false);
+        setNarratorStatus('Broadcast paused.');
+      } catch (err) {
+        console.warn(err);
+      }
+    }
   };
 
   const stopNarrator = () => {
-    window.speechSynthesis.cancel();
-    setIsPlayingNarrator(false);
-    setIsPausedNarrator(false);
-    setNarratorStatus('Broadcast stopped.');
-    setTimeout(() => setNarratorStatus(''), 2000);
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        setIsPlayingNarrator(false);
+        setIsPausedNarrator(false);
+        setNarratorStatus('Broadcast stopped.');
+        setTimeout(() => setNarratorStatus(''), 2000);
+      } catch (err) {
+        console.warn(err);
+      }
+    }
   };
 
   useEffect(() => {
