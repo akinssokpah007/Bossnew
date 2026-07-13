@@ -196,7 +196,7 @@ export const newsService = {
     try {
       const colRef = collection(db, 'articles');
       const snapPromise = getDocs(colRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
@@ -222,7 +222,7 @@ export const newsService = {
       const colRef = collection(db, 'articles');
       const q = query(colRef, where('slug', '==', slug), limit(1));
       const snapPromise = getDocs(q);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap && !snap.empty) {
@@ -249,7 +249,7 @@ export const newsService = {
     try {
       const docRef = doc(db, 'articles', id);
       const docSnapPromise = getDoc(docRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const docSnap = await Promise.race([docSnapPromise, timeoutPromise]);
       if (docSnap && docSnap.exists()) {
@@ -299,7 +299,7 @@ export const newsService = {
       });
 
       const timeoutPromise = new Promise<string>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       return await Promise.race([writePromise, timeoutPromise]);
@@ -325,7 +325,7 @@ export const newsService = {
       
       const writePromise = updateDoc(docRef, cleaned);
       const timeoutPromise = new Promise<void>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       await Promise.race([writePromise, timeoutPromise]);
@@ -343,7 +343,7 @@ export const newsService = {
       const docRef = doc(db, 'articles', id);
       const writePromise = deleteDoc(docRef);
       const timeoutPromise = new Promise<void>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 1800)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       await Promise.race([writePromise, timeoutPromise]);
@@ -365,7 +365,7 @@ export const newsService = {
       const writePromise = updateDoc(docRef, {
         views: increment(1)
       });
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not increment view count in cloud database.", error);
@@ -378,7 +378,7 @@ export const newsService = {
     try {
       const colRef = collection(db, 'categories');
       const snapPromise = getDocs(colRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
@@ -413,7 +413,7 @@ export const newsService = {
         Object.entries(cat).filter(([_, v]) => v !== undefined)
       );
       const writePromise = setDoc(doc(db, 'categories', id), cleaned);
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1800));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not sync category to Cloud Firestore. Saved in client storage.", error);
@@ -429,7 +429,7 @@ export const newsService = {
     try {
       const docRef = doc(db, 'categories', id);
       const writePromise = deleteDoc(docRef);
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1800));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not sync category deletion to Cloud Firestore. Deleted from client storage.", error);
@@ -442,7 +442,7 @@ export const newsService = {
     try {
       const colRef = collection(db, 'tags');
       const snapPromise = getDocs(colRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
@@ -477,7 +477,7 @@ export const newsService = {
         Object.entries(tag).filter(([_, v]) => v !== undefined)
       );
       const writePromise = setDoc(doc(db, 'tags', id), cleaned);
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1800));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not sync tag to Cloud Firestore. Saved in client storage.", error);
@@ -493,7 +493,7 @@ export const newsService = {
     try {
       const docRef = doc(db, 'tags', id);
       const writePromise = deleteDoc(docRef);
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1800));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not sync tag deletion to Cloud Firestore. Deleted from client storage.", error);
@@ -505,7 +505,7 @@ export const newsService = {
     try {
       const colRef = collection(db, 'activityLogs');
       const snapPromise = getDocs(colRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
@@ -528,7 +528,7 @@ export const newsService = {
         timestamp: new Date().toISOString()
       };
       const writePromise = addDoc(colRef, log);
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Error logging activity to cloud database.", error);
@@ -540,7 +540,7 @@ export const newsService = {
     try {
       const colRef = collection(db, 'users');
       const snapPromise = getDocs(colRef);
-      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1800));
+      const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       
       const snap = await Promise.race([snapPromise, timeoutPromise]);
       if (snap) {
@@ -556,7 +556,7 @@ export const newsService = {
     try {
       const docRef = doc(db, 'users', uid);
       const writePromise = updateDoc(docRef, { role });
-      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1800));
+      const timeoutPromise = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn("Could not sync user role change.", error);

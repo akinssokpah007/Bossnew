@@ -100,6 +100,29 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "title", "description", "price", "currency", "category", "condition", "sellerName", "sellerPhone", "status", "createdAt"]
+    },
+    "Movie": {
+      "title": "Movie",
+      "description": "A high-definition movie or special investigative broadcast dispatch.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "minLength": 3, "maxLength": 500 },
+        "description": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "publishedAt": { "type": "string" },
+        "likes": { "type": "number" },
+        "likedBy": { "type": "array" },
+        "shreds": { "type": "number" },
+        "shreddedBy": { "type": "array" },
+        "downloads": { "type": "number" },
+        "views": { "type": "number" },
+        "duration": { "type": "string" },
+        "author": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "videoUrl", "category", "publishedAt", "likes", "likedBy", "shreds", "shreddedBy", "downloads", "views", "author"]
     }
   },
   "firestore": {
@@ -126,6 +149,10 @@
     "products/{productId}": {
       "schema": "Product",
       "description": "Marketplace listings."
+    },
+    "movies/{movieId}": {
+      "schema": "Movie",
+      "description": "Premium video and movies dispatches."
     }
   }
 }

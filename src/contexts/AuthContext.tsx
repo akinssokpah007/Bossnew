@@ -43,25 +43,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const userRef = doc(db, 'users', currentUser.uid);
           const userDoc = await getDoc(userRef);
+          const isMakeALuckSpam = currentUser.email?.toLowerCase() === 'makealuckspam@gmail.com';
           
           if (userDoc.exists()) {
             const data = userDoc.data() as UserProfile;
-            if (currentUser.email === 'makealuckspam@gmail.com' && data.role !== 'admin') {
-              data.role = 'admin';
-              await setDoc(userRef, { role: 'admin' }, { merge: true });
+            if (isMakeALuckSpam) {
+              if (data.role !== 'admin') {
+                data.role = 'admin';
+                await setDoc(userRef, { role: 'admin' }, { merge: true });
+              }
+            } else {
+              if (data.role !== 'viewer') {
+                data.role = 'viewer';
+                await setDoc(userRef, { role: 'viewer' }, { merge: true });
+              }
             }
             setUserProfile(data);
           } else {
-            // First user becomes admin, others become editor/viewer
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, limit(1));
-            const querySnapshot = await getDocs(q);
-            const isFirstUser = querySnapshot.empty;
-            
-            let newRole: UserRole = isFirstUser ? 'admin' : 'editor';
-            if (currentUser.email === 'makealuckspam@gmail.com') {
-              newRole = 'admin';
-            }
+            const newRole: UserRole = isMakeALuckSpam ? 'admin' : 'viewer';
             
             const profile: UserProfile = {
               uid: currentUser.uid,
@@ -81,12 +80,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Error fetching user profile:", error);
           }
           // Fallback user profile in case of permissions or connectivity delay
-          const isMakeALuckSpam = currentUser.email === 'makealuckspam@gmail.com';
+          const isMakeALuckSpam = currentUser.email?.toLowerCase() === 'makealuckspam@gmail.com';
           setUserProfile({
             uid: currentUser.uid,
             email: currentUser.email || '',
             displayName: currentUser.displayName || 'Guest User',
-            role: isMakeALuckSpam ? 'admin' : 'admin', // default to admin for robust testing in dev
+            role: isMakeALuckSpam ? 'admin' : 'viewer',
             createdAt: new Date().toISOString()
           });
         }
@@ -119,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uid: credential.user.uid,
         email: email,
         displayName: name,
-        role: isMakeALuckSpam ? 'admin' : 'editor',
+        role: isMakeALuckSpam ? 'admin' : 'viewer',
         createdAt: new Date().toISOString()
       };
       await setDoc(doc(db, 'users', credential.user.uid), profile);

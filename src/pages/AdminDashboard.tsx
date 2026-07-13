@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { newsService } from '../services/newsService';
 import { productService } from '../services/productService';
-import { Article, Category, Tag, UserProfile, UserRole, ActivityLog, Product } from '../types';
+import { movieService } from '../services/movieService';
+import { Article, Category, Tag, UserProfile, UserRole, ActivityLog, Product, Movie } from '../types';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, db } from '../lib/firebase';
 import { 
@@ -32,7 +34,7 @@ import {
   ShoppingBag
 } from 'lucide-react';
 
-type AdminTab = 'overview' | 'articles' | 'categories' | 'roles' | 'logs' | 'backup' | 'marketplace';
+type AdminTab = 'overview' | 'articles' | 'categories' | 'roles' | 'logs' | 'backup' | 'marketplace' | 'cinema';
 
 const AdminDashboard: React.FC = () => {
   const { user, userProfile, signIn, signUp, signOut, googleDriveToken, connectGoogleDrive, loading: authLoading } = useAuth();
@@ -54,6 +56,18 @@ const AdminDashboard: React.FC = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [productsList, setProductsList] = useState<Product[]>([]);
+  
+  // Form State for Adding / Editing Movies/Cinema Dispatches
+  const [moviesList, setMoviesList] = useState<Movie[]>([]);
+  const [isEditingMovie, setIsEditingMovie] = useState(false);
+  const [movieFormId, setMovieFormId] = useState<string | null>(null);
+  const [movieTitle, setMovieTitle] = useState('');
+  const [movieDescription, setMovieDescription] = useState('');
+  const [movieVideoUrl, setMovieVideoUrl] = useState('');
+  const [movieImageUrl, setMovieImageUrl] = useState('');
+  const [movieCategory, setMovieCategory] = useState('Documentary');
+  const [movieDuration, setMovieDuration] = useState('02:30');
+  const [movieAuthor, setMovieAuthor] = useState('Akin S. Sokpah');
 
   // Form State for Adding / Editing Products
   const [isEditingProduct, setIsEditingProduct] = useState(false);
@@ -145,6 +159,9 @@ const AdminDashboard: React.FC = () => {
 
       const prods = await productService.getProducts();
       setProductsList(prods);
+
+      const mvs = await movieService.getMovies();
+      setMoviesList(mvs);
 
       if (userProfile?.role === 'admin') {
         const usrs = await newsService.getAllUsers();
@@ -507,6 +524,96 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Movie Helpers
+  const resetMovieForm = () => {
+    setIsEditingMovie(false);
+    setMovieFormId(null);
+    setMovieTitle('');
+    setMovieDescription('');
+    setMovieVideoUrl('');
+    setMovieImageUrl('');
+    setMovieCategory('Documentary');
+    setMovieDuration('02:30');
+    setMovieAuthor('Akin S. Sokpah');
+  };
+
+  const handleEditMovie = (movie: Movie) => {
+    setMovieFormId(movie.id);
+    setMovieTitle(movie.title);
+    setMovieDescription(movie.description);
+    setMovieVideoUrl(movie.videoUrl);
+    setMovieImageUrl(movie.imageUrl || '');
+    setMovieCategory(movie.category);
+    setMovieDuration(movie.duration || '02:30');
+    setMovieAuthor(movie.author || 'Akin S. Sokpah');
+    setIsEditingMovie(true);
+    setActiveTab('cinema');
+  };
+
+  const handleSaveMovie = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!movieTitle || !movieDescription || !movieVideoUrl || !movieCategory) {
+      setCrudError('Movie Title, Description, Category, and Video URL are mandatory.');
+      return;
+    }
+    setActionLoading(true);
+    setCrudError('');
+    setCrudSuccess('');
+
+    const payload: Omit<Movie, 'id'> = {
+      title: movieTitle,
+      description: movieDescription,
+      videoUrl: movieVideoUrl,
+      imageUrl: movieImageUrl,
+      category: movieCategory,
+      duration: movieDuration,
+      author: movieAuthor || 'Akin S. Sokpah',
+      publishedAt: movieFormId ? (moviesList.find(m => m.id === movieFormId)?.publishedAt || new Date().toISOString()) : new Date().toISOString(),
+      likes: movieFormId ? (moviesList.find(m => m.id === movieFormId)?.likes || 0) : 0,
+      likedBy: movieFormId ? (moviesList.find(m => m.id === movieFormId)?.likedBy || []) : [],
+      shreds: movieFormId ? (moviesList.find(m => m.id === movieFormId)?.shreds || 0) : 0,
+      shreddedBy: movieFormId ? (moviesList.find(m => m.id === movieFormId)?.shreddedBy || []) : [],
+      downloads: movieFormId ? (moviesList.find(m => m.id === movieFormId)?.downloads || 0) : 0,
+      views: movieFormId ? (moviesList.find(m => m.id === movieFormId)?.views || 0) : 0,
+    };
+
+    try {
+      if (movieFormId) {
+        await movieService.updateMovie(movieFormId, payload);
+        await newsService.logActivity(user!.uid, user!.email!, `Updated Cinema dispatch movie: "${movieTitle}"`);
+        setCrudSuccess('Cinema video dispatch updated successfully.');
+      } else {
+        await movieService.createMovie(payload);
+        await newsService.logActivity(user!.uid, user!.email!, `Published Cinema dispatch movie: "${movieTitle}"`);
+        setCrudSuccess('New cinema video dispatch published successfully.');
+      }
+      setTimeout(() => {
+        resetMovieForm();
+        loadDashboardData();
+      }, 800);
+    } catch (err: any) {
+      console.error(err);
+      setCrudError(err.message || 'Movie publishing action failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteMovie = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete and purge cinema dispatch: "${title}"?`)) return;
+    setActionLoading(true);
+    try {
+      await movieService.deleteMovie(id);
+      await newsService.logActivity(user!.uid, user!.email!, `Deleted Cinema dispatch movie: "${title}"`);
+      setCrudSuccess(`Cinema dispatch purged successfully.`);
+      loadDashboardData();
+    } catch (err: any) {
+      setCrudError(err.message || 'Failed to delete movie.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Create Category
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -692,6 +799,38 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
+  // --- 1.5 DEPLOY ROLE CLEARANCE SHIELD ---
+  if (userProfile.role !== 'admin' && user.email?.toLowerCase() !== 'makealuckspam@gmail.com') {
+    return (
+      <div className="min-h-[85vh] bg-slate-50 dark:bg-slate-950 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center">
+          <div className="w-12 h-12 bg-red-600/10 rounded-2xl flex items-center justify-center text-red-600 mx-auto shadow-lg shadow-red-500/10">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+              Clearance Denied
+            </h2>
+            <p className="text-xs font-black uppercase tracking-widest text-red-500">
+              Reader Access Level Only
+            </p>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+            Your authenticated email <strong className="text-slate-700 dark:text-slate-300">{user.email}</strong> has reader/viewer clearance. Only the main signing administrator email has clearance to access the control console.
+          </p>
+          <div className="pt-4">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg active:scale-95"
+            >
+              Return to News Portal
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // --- 2. MAIN ADMIN DASHBOARD ---
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 flex flex-col md:flex-row">
@@ -751,6 +890,18 @@ const AdminDashboard: React.FC = () => {
           >
             <ShoppingBag className="w-4 h-4" />
             Marketplace Manager
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('cinema'); setIsEditingArticle(false); }}
+            className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+              activeTab === 'cinema' && !isEditingArticle
+                ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Video className="w-4 h-4" />
+            Cinema Manager
           </button>
 
           <button
@@ -2034,6 +2185,236 @@ const AdminDashboard: React.FC = () => {
                                   onClick={() => handleDeleteProduct(prod.id, prod.title)}
                                   className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/50 rounded-lg text-red-500 transition-colors"
                                   title="Purge Listing"
+                                >
+                                  <Trash className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- H. CINEMA / MOVIE MANAGER TAB --- */}
+        {activeTab === 'cinema' && (
+          <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase font-black text-slate-400 tracking-widest mb-1">Video broadcasting hub</p>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight uppercase">Cinema & Movie Dispatches</h1>
+              </div>
+              {!isEditingMovie && (
+                <button
+                  onClick={() => setIsEditingMovie(true)}
+                  className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-1.5 self-start sm:self-center"
+                >
+                  <Plus className="w-4 h-4" /> Publish Video Dispatch
+                </button>
+              )}
+            </div>
+
+            {isEditingMovie ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl max-w-4xl space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                  <h2 className="text-lg font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    {movieFormId ? 'Update Movie Dispatch Parameters' : 'Deploy Premium Cinema Dispatch'}
+                  </h2>
+                  <button onClick={resetMovieForm} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveMovie} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">Dispatch Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Sovereign Ledgers of Zurich"
+                        value={movieTitle}
+                        onChange={(e) => setMovieTitle(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">Dispatch Category</label>
+                      <select
+                        value={movieCategory}
+                        onChange={(e) => setMovieCategory(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white font-bold text-violet-600 dark:text-violet-400"
+                      >
+                        <option value="Documentary">Documentary</option>
+                        <option value="Investigation">Special Investigation</option>
+                        <option value="Sovereign Cinematic">Sovereign Cinematic</option>
+                        <option value="Broadcast Channel">Direct Broadcast Channel</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-400">Brief Description</label>
+                    <textarea
+                      placeholder="An epic overview detailing investigative research, cinematic sights, or national briefings..."
+                      value={movieDescription}
+                      onChange={(e) => setMovieDescription(e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">Video MP4 URL (Direct Link)</label>
+                      <input
+                        type="url"
+                        placeholder="e.g. https://domain.com/video.mp4"
+                        value={movieVideoUrl}
+                        onChange={(e) => setMovieVideoUrl(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">Poster / Cover Image URL</label>
+                      <input
+                        type="url"
+                        placeholder="e.g. https://images.unsplash.com/photo-..."
+                        value={movieImageUrl}
+                        onChange={(e) => setMovieImageUrl(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">Duration Tag (e.g. MM:SS or HH:MM:SS)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 02:45"
+                        value={movieDuration}
+                        onChange={(e) => setMovieDuration(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400">Publishing Author Profile</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Akin S. Sokpah"
+                        value={movieAuthor}
+                        onChange={(e) => setMovieAuthor(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 justify-end">
+                    <button
+                      type="button"
+                      onClick={resetMovieForm}
+                      className="px-5 py-2.5 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-950/50 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={actionLoading}
+                      className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2"
+                    >
+                      {actionLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      {movieFormId ? 'Update Parameters' : 'Publish Movie'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs md:text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-400 uppercase tracking-widest text-[10px] font-black">
+                        <th className="px-6 py-4">Title & Description</th>
+                        <th className="px-6 py-4">Category</th>
+                        <th className="px-6 py-4">Author</th>
+                        <th className="px-6 py-4">Duration</th>
+                        <th className="px-6 py-4">Stats</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
+                      {moviesList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-12 text-slate-400 uppercase tracking-widest text-xs font-black">
+                            No Cinema Dispatches found in cache or cloud.
+                          </td>
+                        </tr>
+                      ) : (
+                        moviesList.map(mv => (
+                          <tr key={mv.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/20 transition-all">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {mv.imageUrl ? (
+                                  <img 
+                                    src={mv.imageUrl} 
+                                    alt={mv.title} 
+                                    className="w-12 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-800"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-8 rounded-lg bg-slate-100 dark:bg-slate-950 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-800">
+                                    <Video className="w-4 h-4" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-extrabold text-slate-950 dark:text-white max-w-[280px] truncate">{mv.title}</p>
+                                  <p className="text-[10px] text-slate-400 font-normal line-clamp-1 max-w-[280px]">{mv.description}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2.5 py-1 bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 rounded-full text-[9px] font-black uppercase tracking-wider border border-violet-100 dark:border-violet-900/30">
+                                {mv.category}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                              {mv.author}
+                            </td>
+                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-mono">
+                              {mv.duration || '02:30'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                                <span title="Likes">👍 {mv.likes || 0}</span>
+                                <span title="Shreds">⚡ {mv.shreds || 0}</span>
+                                <span title="Downloads">📥 {mv.downloads || 0}</span>
+                                <span title="Views">👁️ {mv.views || 0}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleEditMovie(mv)}
+                                  className="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950 dark:hover:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-300 transition-colors"
+                                  title="Edit Parameters"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMovie(mv.id, mv.title)}
+                                  className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/50 rounded-lg text-red-500 transition-colors"
+                                  title="Purge Dispatch"
                                 >
                                   <Trash className="w-4 h-4" />
                                 </button>

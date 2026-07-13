@@ -135,7 +135,7 @@ const Navbar: React.FC = () => {
             {/* Auth section */}
             {user && (
               <div className="flex items-center space-x-3 pl-2 border-l border-slate-200 dark:border-slate-800">
-                {(userProfile?.role === 'admin' || userProfile?.role === 'editor' || user.email === 'makealuckspam@gmail.com') && (
+                {user?.email?.toLowerCase() === 'makealuckspam@gmail.com' && (
                   <Link 
                     to="/admin" 
                     className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600 text-white text-sm font-bold rounded-full shadow-lg shadow-violet-500/20 transition-all active:scale-95"
@@ -264,7 +264,7 @@ const Navbar: React.FC = () => {
                   </div>
                 </div>
 
-                {(userProfile?.role === 'admin' || userProfile?.role === 'editor' || user.email === 'makealuckspam@gmail.com') && (
+                {user?.email?.toLowerCase() === 'makealuckspam@gmail.com' && (
                   <Link 
                     to="/admin" 
                     onClick={() => setMobileMenuOpen(false)}

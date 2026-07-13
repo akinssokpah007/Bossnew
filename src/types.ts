@@ -71,3 +71,22 @@ export interface Product {
   createdAt: string;
 }
 
+export interface Movie {
+  id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  imageUrl?: string; // Poster or background image
+  category: string;  // e.g. "Documentary", "Special Investigation", "Sovereign Cinematic"
+  publishedAt: string;
+  likes: number;
+  likedBy: string[]; // User IDs who liked
+  shreds: number;
+  shreddedBy: string[]; // User IDs who shredded
+  downloads: number;
+  views: number;
+  duration?: string; // e.g. "02:15" or "1:45:00"
+  author: string;
+}
+
+
